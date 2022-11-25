@@ -15,15 +15,19 @@
  	<h1>Afegir Ciutat</h1>
  
  	<?php
- 		$conn = mysqli_connect('127.0.0.1','admin','admin123');
- 		mysqli_select_db($conn, 'world');
- 		$consulta = "SELECT * FROM country;";
- 		$resultat = mysqli_query($conn, $consulta);
- 		if (!$resultat) {
-     			$message  = 'Consulta invàlida: ' . mysqli_error($conn) . "\n";
-     			$message .= 'Consulta realitzada: ' . $consulta;
-     			die($message);
- 		}
+ 		try {
+			$hostname = "127.0.0.1";
+			$dbname = "world";
+			$username = "igonzalez";
+			$pw = "Superlocal123";
+			$pdo = new PDO ("mysql:host=$hostname;dbname=$dbname","$username","$pw");
+			} catch (PDOException $e) {
+			echo "Failed to get DB handle: " . $e->getMessage() . "\n";
+			exit;
+			} 
+			
+			$query = $pdo->prepare("SELECT * FROM country;");
+			$query->execute();
  	?>
  
     <form action="" method="POST">
@@ -31,10 +35,11 @@
  	<select name="codi_pais" id="codi_pais">
 
  	<?php
- 		
- 		while( $registre = mysqli_fetch_assoc($resultat) )
+ 		$row = $query->fetch();
+ 		while( $row )
  		{
-            echo "<option value=".$registre["Code"].">".$registre["Name"]."</option>";
+            echo "<option value=".$row["Code"].">".$row["Name"]."</option>";
+			$row = $query->fetch();
  		}
  	?>
 
@@ -48,18 +53,17 @@
 
     <?php
         if(isset($_POST["submit"])){
-            $query = "select * from city where name= '".$_POST["nom_ciutat"]."' and CountryCode= '".$_POST["codi_pais"]."';";
-            $resQuery = mysqli_query($conn, $query);
-            $filesQuery = mysqli_num_rows($resQuery);
+			$query = $pdo->prepare("SELECT * from city where name= '".$_POST["nom_ciutat"]."' and CountryCode= '".$_POST["codi_pais"]."';");
+			$query->execute();
+            $resQuery = $query->fetch();
+            $filesQuery = $pdo->query("SELECT count(*) from city where name= '".$_POST["nom_ciutat"]."' and CountryCode= '".$_POST["codi_pais"]."';")->fetchColumn();
         if($filesQuery > 0){
             echo "<div class='missatge'>Aquesta ciutat ja existeix en aquest país</div>";
         }
         else{
-            $queryInsert = "INSERT INTO city (Name,CountryCode,Population) values('".$_POST["nom_ciutat"]."','".$_POST["codi_pais"]."',".$_POST["poblacio"].");";
-            $resultat = mysqli_query($conn, $queryInsert);
-            if($resultat){
-                echo "<div class='missatge'>Ciutat afegida correctament</div>";
-            }
+			$queryInsert = $pdo->prepare("INSERT INTO city (Name,CountryCode,Population) values('".$_POST["nom_ciutat"]."','".$_POST["codi_pais"]."',".$_POST["poblacio"].");");
+			$queryInsert->execute();
+			echo "<div class='missatge'>Ciutat afegida correctament</div>";
         }
         }
     ?>
